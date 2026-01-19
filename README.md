@@ -1,8 +1,8 @@
 # ego-exo-datakit
 
-`ego-exo-datakit` is a small Python package for reading the ego/exo MCAP files produced by `egocentric-quest/ego-exo-cam-v2`.
+`ego-exo-datakit` is a small Python package for reading ego/exo MCAP files.
 
-The package is built against the MCAPs already present under [`egocentric-quest/downloads`](../egocentric-quest/downloads) and exposes helpers for:
+It exposes helpers for:
 
 - egocam images
 - exocam images
@@ -27,11 +27,9 @@ pip install -e . --no-build-isolation
 
 ## How The MCAPs Are Generated
 
-The generation path in the existing repo is:
+The MCAPs consumed by this package are produced in two stages:
 
-1. [`batch_process_folders.py`](../egocentric-quest/ego-exo-cam-v2/pipeline/batch_process_folders.py) orchestrates per-folder processing.
-2. That script delegates per-cut work to [`run_pipeline.py`](../egocentric-quest/ego-exo-cam-v2/pipeline/run_pipeline.py).
-3. [`safari_protobuf_integration_fullbody.py`](../egocentric-quest/ego-exo-cam-v2/safari_protobuf_integration_fullbody.py) converts tracking JSON plus synced videos into timestamped protobuf files:
+1. Tracking JSON plus synchronized video streams are converted into timestamped Safari protobuf messages such as:
    - `session.pb`
    - `file_metadata.pb`
    - `camera_intrinsics.pb`
@@ -41,11 +39,10 @@ The generation path in the existing repo is:
    - `lowerbody_tracking/*.pb`
    - `camera_extrinsics/*.pb`
    - `images/*.pb`
-   - per-exocam `*_intrinsics.pb`, `*_extrinsics/*.pb`, and `*_images/*.pb`
-4. [`pack_safari_mcap_official.py`](../egocentric-quest/ego-exo-cam-v2/pack_safari_mcap_official.py) packs those protobuf messages into MCAP topics.
-5. In batch mode, [`batch_process_folders.py`](../egocentric-quest/ego-exo-cam-v2/pipeline/batch_process_folders.py) can patch wrist orientations in-place after MCAP creation.
+   - per-camera `*_intrinsics.pb`, `*_extrinsics/*.pb`, and `*_images/*.pb`
+2. Those protobuf messages are then packed into MCAP topics.
 
-So the MCAP is not written directly from raw JSON. The pipeline first materializes Safari protobuf messages and then packs them into MCAP.
+So the MCAP is not written directly from raw JSON. The generator first materializes protobuf messages and then packs them into MCAP.
 
 ## Schema Layout
 
@@ -126,14 +123,14 @@ Each script below takes `--mcap /path/to/file.mcap`.
 ### Metadata
 
 ```bash
-python scripts/read_metadata.py --mcap ../egocentric-quest/downloads/.../file.mcap
+python scripts/read_metadata.py --mcap /path/to/file.mcap
 ```
 
 ### Egocam Images
 
 ```bash
 python scripts/read_egocam_images.py \
-  --mcap ../egocentric-quest/downloads/.../file.mcap \
+  --mcap /path/to/file.mcap \
   --count 2 \
   --output-dir ./tmp_frames
 ```
@@ -142,7 +139,7 @@ python scripts/read_egocam_images.py \
 
 ```bash
 python scripts/read_exocam_images.py \
-  --mcap ../egocentric-quest/downloads/.../file.mcap \
+  --mcap /path/to/file.mcap \
   --camera exocam1 \
   --count 2
 ```
@@ -150,15 +147,24 @@ python scripts/read_exocam_images.py \
 ### Keypoints
 
 ```bash
-python scripts/read_keypoints.py --mcap ../egocentric-quest/downloads/.../file.mcap
+python scripts/read_keypoints.py --mcap /path/to/file.mcap
 ```
 
 ### Camera Poses
 
 ```bash
-python scripts/read_camera_positions.py --mcap ../egocentric-quest/downloads/.../file.mcap
+python scripts/read_camera_positions.py --mcap /path/to/file.mcap
 ```
 
 ## Tested Data
 
-The package and examples were written against the nine MCAPs under [`egocentric-quest/downloads`](../egocentric-quest/downloads).
+The package and examples were validated against real MCAP files.
+
+## Running Tests
+
+Point the test suite at any directory containing `.mcap` files:
+
+```bash
+export EGO_EXO_DATAKIT_TEST_DATA_ROOT=/path/to/mcap_dir
+pytest -q
+```

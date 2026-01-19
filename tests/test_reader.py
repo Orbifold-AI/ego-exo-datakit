@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,11 +9,14 @@ from ego_exo_datakit import EgoExoMcapReader
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE_ROOT = REPO_ROOT.parent
-DOWNLOADS_ROOT = WORKSPACE_ROOT / "egocentric-quest" / "downloads"
-MCAP_PATHS = sorted(DOWNLOADS_ROOT.rglob("*.mcap"))
+TEST_DATA_ROOT_ENV = "EGO_EXO_DATAKIT_TEST_DATA_ROOT"
+TEST_DATA_ROOT = os.environ.get(TEST_DATA_ROOT_ENV, "").strip()
+MCAP_PATHS = sorted(Path(TEST_DATA_ROOT).rglob("*.mcap")) if TEST_DATA_ROOT else []
 
-pytestmark = pytest.mark.skipif(not MCAP_PATHS, reason="No MCAP files found under egocentric-quest/downloads")
+pytestmark = pytest.mark.skipif(
+    not MCAP_PATHS,
+    reason=f"No MCAP files found. Set {TEST_DATA_ROOT_ENV} to a directory containing .mcap files.",
+)
 
 
 @pytest.mark.parametrize("mcap_path", MCAP_PATHS)
@@ -60,4 +64,3 @@ def test_read_modalities_from_sample_downloaded_mcap() -> None:
     headcam_intrinsics = reader.get_camera_intrinsics("headcam")
     assert headcam_intrinsics.image_width == egocam.width
     assert headcam_intrinsics.image_height == egocam.height
-
